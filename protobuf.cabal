@@ -10,7 +10,7 @@ maintainer:          aditu.venyhandottir@gmail.com
 copyright:           2017 Iris Ward
 category:            Web
 build-type:          Custom
-extra-source-files:  README.md
+extra-source-files:  README.md, src/TestProto.proto
 cabal-version:       >=1.10
 
 custom-setup
