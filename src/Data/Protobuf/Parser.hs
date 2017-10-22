@@ -1,5 +1,9 @@
-module Data.Protobuf.Parser(identifier, protoSpec, protoType) where
+module Data.Protobuf.Parser( module ProtoSpec
+                           , identifier
+                           , protoSpec
+                           , protoType) where
 
+import Data.Protobuf.ProtoSpec as ProtoSpec
 import Data.Protobuf.Parser.Internal(identifier, protoSpec, protoType)
 
 -- Shim module so that the relevant parts of the internal implementation

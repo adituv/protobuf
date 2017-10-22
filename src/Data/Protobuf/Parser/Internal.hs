@@ -23,45 +23,47 @@ import Text.Megaparsec
 import qualified Text.Megaparsec.Lexer as L
 
 -- | Parser that skips all whitespace and line comments
-spaceConsumer :: Parsec () Text ()
+spaceConsumer :: Parsec Dec Text ()
 spaceConsumer = L.space (void spaceChar) (L.skipLineComment "//") mzero
 
 -- | Utility to wrap a parser for a lexeme so that it also consumes
 --   following space characters.  Useful when no explicit lexer phase
 --   is used.
-lexeme :: Parsec () Text a -> Parsec () Text a
+lexeme :: Parsec Dec Text a -> Parsec Dec Text a
 lexeme = L.lexeme spaceConsumer
 
 -- | Parses a lexeme of a literal symbol.
-symbol :: String -> Parsec () Text String
+symbol :: String -> Parsec Dec Text String
 symbol = try . L.symbol spaceConsumer
 
 -- | Parses an ascii letter in either uppercase or lowercase.
-alphaChar :: Parsec () Text Char
-alphaChar = satisfy ((||) <$> isAsciiUpper <*> isAsciiLower)
+alphaChar :: Parsec Dec Text Char
+alphaChar = satisfy ((||) <$> isAsciiUpper <*> isAsciiLower) <?> "letter"
 
-decimal :: Parsec () Text Int
-decimal = lexeme $ read <$> many digitChar
+decimal :: Parsec Dec Text Int
+decimal = lexeme $ fromInteger <$> L.decimal
 
 -- | Parses a valid protobuf identifier.  **Not a lexeme.**
-ident :: Parsec () Text String
-ident = (:) <$> letterChar <*> many (alphaChar <|> digitChar <|> char '_')
+ident :: Parsec Dec Text String
+ident = (:) <$> alphaChar <*> many (alphaChar <|> digitChar <|> char '_')
+     <?> "identifier"
 
 -- | Parses a valid protobuf identifier as a lexeme.
-identifier :: Parsec () Text String
+identifier :: Parsec Dec Text String
 identifier = lexeme ident
 
-identString :: Parsec () Text String
-identString = between (char '"') (char '"') identifier
+identString :: Parsec Dec Text String
+identString = between (char '"') (char '"') identifier <?> "identifier string"
 
-protoSpec :: Parsec () Text ProtoSpec
-protoSpec = do
+protoSpec :: Parsec Dec Text ProtoSpec
+protoSpec = (do
     void $ symbol "message"
     messageName <- lexeme identifier
-    (innerSpecs, fields, reserved) <- protoSpecBody
-    pure ProtoSpec{..}
+    between (symbol "{") (symbol "}") $ do
+      (innerSpecs, fields, reserved) <- protoSpecBody
+      pure ProtoSpec{..}) <?> "message specification"
 
-protoSpecBody :: Parsec () Text ([ProtoSpec], [FieldSpec], [Reservation])
+protoSpecBody :: Parsec Dec Text ([ProtoSpec], [FieldSpec], [Reservation])
 protoSpecBody = recombine <$> many specBodyEntry
   where
     recombine :: [SpecBodyEntry] -> ([ProtoSpec], [FieldSpec], [Reservation])
@@ -76,26 +78,27 @@ data SpecBodyEntry = MessageEntry ProtoSpec
                    | ReservedEntry [Reservation]
                    deriving Show
 
-specBodyEntry :: Parsec () Text SpecBodyEntry
+specBodyEntry :: Parsec Dec Text SpecBodyEntry
 specBodyEntry =  MessageEntry <$> protoSpec
              <|> FieldEntry <$> fieldSpec
              <|> ReservedEntry <$> reservation
 
-fieldSpec :: Parsec () Text FieldSpec
-fieldSpec = do
+fieldSpec :: Parsec Dec Text FieldSpec
+fieldSpec = (do
     fieldMod <- fieldModifier
     fieldType <- protoType
     fieldName <- identifier
     void $ symbol "="
     fieldTag <- decimal
     void $ symbol ";"
-    pure FieldSpec{..}
+    pure FieldSpec{..}) <?> "field specification"
 
-fieldModifier :: Parsec () Text FieldModifier
+fieldModifier :: Parsec Dec Text FieldModifier
 fieldModifier =  Repeated <$ symbol "repeated"
              <|> pure Optional
+             <?> "field modifier"
 
-protoType :: Parsec () Text ProtoType
+protoType :: Parsec Dec Text ProtoType
 protoType =  PDouble <$ symbol "double"
          <|> PFloat <$ symbol "float"
          <|> PInt32 <$ symbol "int32"
@@ -110,19 +113,23 @@ protoType =  PDouble <$ symbol "double"
          <|> PString <$ symbol "string"
          <|> PBytes <$ symbol "bytes"
          <|> NamedField <$> identifier
+         <?> "protobuf type"
 
-reservation :: Parsec () Text [Reservation]
-reservation = do
+reservation :: Parsec Dec Text [Reservation]
+reservation = (do
     void $ symbol "reserved"
-    res `sepBy` symbol ","
+    rs <- rtags `sepBy` symbol "," <|> rnames `sepBy` symbol ","
+    void $ symbol ";"
+    pure rs) <?> "reserved statement"
   where
-    res :: Parsec () Text Reservation
-    res =  RName <$> identString
-       <|> rtags
+    rnames :: Parsec Dec Text Reservation
+    rnames =  RName <$> identString
 
-    -- TODO: rewrite for clarity?
-    rtags :: Parsec () Text Reservation
-    rtags = flip ($) <$> decimal <*> (symbol "to" *>
-        ((RTagToMax <$ symbol "max")
-            <|> (flip RTagRange <$> decimal)
-            <|> pure RTag))
+    rtags :: Parsec Dec Text Reservation
+    rtags = do
+      n <- decimal
+      range <- optional $ symbol "to" *> (RTagToMax <$ symbol "max"
+                                     <|> flip RTagRange <$> decimal)
+      case range of
+        Nothing -> pure $ RTag n
+        Just f -> pure $ f n
