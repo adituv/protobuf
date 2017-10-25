@@ -12,7 +12,7 @@ data ProtoSpec = ProtoSpec
   , innerSpecs :: [ProtoSpec] -- ^ Specifications for nested message types.
   , fields :: [FieldSpec]     -- ^ The fields specified by the specification.
   , reserved :: [Reservation] -- ^ Reserved tags that must not be used.
-  } deriving Show
+  } deriving (Show, Eq)
 
 -- | A value field in the specification of a protobuf message.
 data FieldSpec = FieldSpec
@@ -23,7 +23,7 @@ data FieldSpec = FieldSpec
   , fieldName :: String     -- ^ The name of the field.
   , fieldTag :: !Int        -- ^ The relative position of the field within the
                             --   message.
-  } deriving Show
+  } deriving (Show, Eq)
 
 -- | The field's modifier.  In proto2, there was also a "required" modifier,
 --   meaning the field must be present, and also an "optional" modifier.  In
@@ -64,4 +64,4 @@ data Reservation = RTag !Int -- ^ A single tag.
                                   --   given int.
                  | RTagRange !Int !Int -- ^ All tags in a range, inclusive.
                  | RName String -- ^ A single reserved name.
-                 deriving Show
+                 deriving (Show, Eq)
