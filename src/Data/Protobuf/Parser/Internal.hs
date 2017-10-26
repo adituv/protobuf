@@ -13,14 +13,14 @@ module Data.Protobuf.Parser.Internal
   , reservation
   ) where
 
-import Data.Protobuf.ProtoSpec
+import           Data.Protobuf.ProtoSpec
 
-import Control.Monad(mzero, void)
-import Data.Char
-import Data.List(foldl')
-import Data.Text(Text)
-import Text.Megaparsec
-import qualified Text.Megaparsec.Lexer as L
+import           Control.Monad           (mzero, void)
+import           Data.Char
+import           Data.List               (foldl')
+import           Data.Text               (Text)
+import           Text.Megaparsec
+import qualified Text.Megaparsec.Lexer   as L
 
 -- | Parser that skips all whitespace and line comments
 spaceConsumer :: Parsec Dec Text ()
@@ -53,7 +53,7 @@ identifier :: Parsec Dec Text String
 identifier = lexeme ident
 
 identString :: Parsec Dec Text String
-identString = between (char '"') (char '"') identifier <?> "identifier string"
+identString = between (char '"') (char '"') ident <?> "identifier string"
 
 protoSpec :: Parsec Dec Text ProtoSpec
 protoSpec = (do
@@ -69,8 +69,8 @@ protoSpecBody = recombine <$> many specBodyEntry
     recombine :: [SpecBodyEntry] -> ([ProtoSpec], [FieldSpec], [Reservation])
     recombine = foldl' recombine' ([],[],[])
 
-    recombine' (ms,fs,rs) (MessageEntry m) = (m:ms, fs, rs)
-    recombine' (ms,fs,rs) (FieldEntry f) = (ms, f:fs, rs)
+    recombine' (ms,fs,rs) (MessageEntry m)    = (m:ms, fs, rs)
+    recombine' (ms,fs,rs) (FieldEntry f)      = (ms, f:fs, rs)
     recombine' (ms,fs,rs) (ReservedEntry rs') = (ms, fs, rs ++ rs')
 
 data SpecBodyEntry = MessageEntry ProtoSpec
@@ -118,7 +118,7 @@ protoType =  PDouble <$ symbol "double"
 reservation :: Parsec Dec Text [Reservation]
 reservation = (do
     void $ symbol "reserved"
-    rs <- rtags `sepBy` symbol "," <|> rnames `sepBy` symbol ","
+    rs <- rtags `sepBy1` symbol "," <|> rnames `sepBy1` symbol ","
     void $ symbol ";"
     pure rs) <?> "reserved statement"
   where
@@ -132,4 +132,4 @@ reservation = (do
                                      <|> flip RTagRange <$> decimal)
       case range of
         Nothing -> pure $ RTag n
-        Just f -> pure $ f n
+        Just f  -> pure $ f n
