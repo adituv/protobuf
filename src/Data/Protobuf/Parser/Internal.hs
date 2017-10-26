@@ -15,7 +15,7 @@ module Data.Protobuf.Parser.Internal
 
 import           Data.Protobuf.ProtoSpec
 
-import           Control.Monad           (mzero, void)
+import           Control.Monad           (guard, mzero, void)
 import           Data.Char
 import           Data.List               (foldl')
 import           Data.Text               (Text)
@@ -36,6 +36,10 @@ lexeme = L.lexeme spaceConsumer
 symbol :: String -> Parsec Dec Text String
 symbol = try . L.symbol spaceConsumer
 
+-- | Reserved words
+rwords :: [String]
+rwords = ["message", "reserved"]
+
 -- | Parses an ascii letter in either uppercase or lowercase.
 alphaChar :: Parsec Dec Text Char
 alphaChar = satisfy ((||) <$> isAsciiUpper <*> isAsciiLower) <?> "letter"
@@ -45,8 +49,12 @@ decimal = lexeme $ fromInteger <$> L.decimal
 
 -- | Parses a valid protobuf identifier.  **Not a lexeme.**
 ident :: Parsec Dec Text String
-ident = (:) <$> alphaChar <*> many (alphaChar <|> digitChar <|> char '_')
-     <?> "identifier"
+ident = (<?> "identifier") . try $ do
+  h <- alphaChar
+  t <- many (alphaChar <|> digitChar <|> char '_')
+  let id' = h:t
+  guard $ id' `notElem` rwords
+  pure id'
 
 -- | Parses a valid protobuf identifier as a lexeme.
 identifier :: Parsec Dec Text String
@@ -67,11 +75,13 @@ protoSpecBody :: Parsec Dec Text ([ProtoSpec], [FieldSpec], [Reservation])
 protoSpecBody = recombine <$> many specBodyEntry
   where
     recombine :: [SpecBodyEntry] -> ([ProtoSpec], [FieldSpec], [Reservation])
-    recombine = foldl' recombine' ([],[],[])
+    recombine = reverseEntries . foldl' recombine' ([],[],[])
 
     recombine' (ms,fs,rs) (MessageEntry m)    = (m:ms, fs, rs)
     recombine' (ms,fs,rs) (FieldEntry f)      = (ms, f:fs, rs)
     recombine' (ms,fs,rs) (ReservedEntry rs') = (ms, fs, rs ++ rs')
+
+    reverseEntries (ms, fs, rs) = (reverse ms, reverse fs, rs)
 
 data SpecBodyEntry = MessageEntry ProtoSpec
                    | FieldEntry FieldSpec
