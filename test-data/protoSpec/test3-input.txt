@@ -1,0 +1,17 @@
+message Test3 {
+	reserved 1, 2;
+	uint32 test1 = 5;
+
+	message Result {
+	  uint32 data = 1;
+	  reserved 100 to max;
+	}
+
+	reserved 10 to 20;
+
+	message Extra {
+	  Any blah = 1;
+	}
+
+	bool completed = 21;
+}

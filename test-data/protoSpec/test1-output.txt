@@ -1,0 +1,1 @@
+Right (ProtoSpec {messageName = "SearchRequest", innerSpecs = [], fields = [FieldSpec {fieldMod = Optional, fieldType = PString, fieldName = "query", fieldTag = 1},FieldSpec {fieldMod = Optional, fieldType = PInt32, fieldName = "page_number", fieldTag = 2},FieldSpec {fieldMod = Optional, fieldType = PInt32, fieldName = "result_per_page", fieldTag = 3}], reserved = []})

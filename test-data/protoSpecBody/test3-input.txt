@@ -1,0 +1,12 @@
+message MiddleAA {
+  message Inner {
+    int64 ival = 1;
+    bool  booly = 2;
+  }
+}
+message MiddleBB {
+  message Inner {
+    int32 ival = 1;
+    bool  booly = 2;
+  }
+}

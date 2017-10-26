@@ -1,0 +1,1 @@
+Right ([],[FieldSpec {fieldMod = Optional, fieldType = PInt32, fieldName = "test1", fieldTag = 1},FieldSpec {fieldMod = Optional, fieldType = PString, fieldName = "test2", fieldTag = 2},FieldSpec {fieldMod = Repeated, fieldType = PBool, fieldName = "test3", fieldTag = 11}],[RTagRange 3 10,RTag 12,RTagToMax 50])

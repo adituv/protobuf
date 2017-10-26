@@ -1,0 +1,5 @@
+int32 test1 = 1;
+string test2 = 2;
+reserved 3 to 10;
+repeated bool test3 = 11;
+reserved 12, 50 to max;

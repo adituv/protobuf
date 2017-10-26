@@ -15,10 +15,11 @@ import           Test.Hspec.Megaparsec
 import           Test.QuickCheck
 import           Test.QuickCheck.Instances
 
-import           Control.Applicative           (liftA2)
+import           Control.Applicative           (liftA2, liftA3)
 import           Control.Monad                 (replicateM)
 import           Data.Semigroup                ((<>))
 import qualified Data.Text                     as T
+import qualified Data.Text.IO                  as TIO
 import           Text.Megaparsec
 
 parserTests :: Spec
@@ -172,6 +173,9 @@ protoTypeTests =
       forAll badIdentifier $ \s ->
         runParser (protoType <* eof) "" `shouldFailOn` (T.pack s)
 
+    it "fails to parse \"reserved\"" $
+      runParser (protoType <* eof) "" `shouldFailOn` "reserved"
+
 reservationTests :: Spec
 reservationTests =
   describe "reservation" $ do
@@ -248,6 +252,13 @@ reservationTests =
       property $ forAll anyFieldSpec $ \spec ->
         runParser' reservation (initialState spec) `failsLeaving` spec
 
+    it "fails and consumes no input when attempting to parse a message" $
+      property $ forAll (liftA2 (,) anyIdentifier anyIdentifier) $
+        \(t1,t2) -> do
+          let spec' = "message " <> (T.pack t1) <> " {\n\tuint32 "
+                                 <> (T.pack t2) <> " = 1;\n}\n"
+          runParser' reservation (initialState spec') `failsLeaving` spec'
+
 
 fieldModifierTests :: Spec
 fieldModifierTests =
@@ -316,18 +327,68 @@ fieldSpecTests =
           fieldTag == tag
 
 
+    it "fails and consumes no input when attempting to parse a reservation" $
+      property $ forAll anyResTagEntry $ \resTag ->
+        let
+          reserved' :: T.Text
+          reserved' = "reserved " <> resTag <> ";"
+        in
+          runParser' fieldSpec (initialState $ reserved')
+            `failsLeaving` reserved'
+
+    it "fails and consumes no input when attempting to parse a message" $
+      property $ forAll (liftA2 (,) anyIdentifier anyIdentifier) $
+        \(t1,t2) -> do
+          let spec' = "message " <> (T.pack t1) <> " {\n\tuint32 "
+                                 <> (T.pack t2) <> " = 1;\n}\n"
+          runParser' fieldSpec (initialState spec') `failsLeaving` spec'
 
 specBodyEntryTests :: Spec
 specBodyEntryTests =
   describe "specBodyEntry" $ do
-    pure ()
+    it "parses a FieldEntry" $ property $ forAll anyFieldSpec $ \spec ->
+      runParser specBodyEntry "" spec `parseSatisfies` \e -> case e of
+        FieldEntry _ -> True
+        _            -> False
 
+    it "parses a ReservedEntry" $ property $ forAll anyResTagEntry $ \tags ->
+      runParser specBodyEntry "" ("reserved " <> tags <> ";") `parseSatisfies`
+        \e -> case e of
+          ReservedEntry _ -> True
+          _               -> False
+
+    it "parses a MessageEntry" $ property $
+      forAll (liftA3 (,,) anyIdentifier anyTypeString anyIdentifier) $
+        \(mname,(type',typeS),idname) (Positive tag) -> do
+          let spec' = "message " <> (T.pack mname) <> " {\n\t" <> (T.pack typeS)
+                          <> " " <> (T.pack idname) <> " = "
+                          <> (T.pack $ show (tag :: Int)) <> ";\n}\n"
+          runParser specBodyEntry "" spec' `parseSatisfies`
+            \e -> case e of
+              MessageEntry _ -> True
+              _              -> False
+
+
+-- At this point the nesting in the parsing is too complicated to deal with
+-- directly, so this uses a roll-your-own version of golden testing.  I don't
+-- want to port all these tests to a different test framework (tasty) unless
+-- I have to.
 protoSpecBodyTests :: Spec
 protoSpecBodyTests =
   describe "protoSpecBody" $ do
-    pure ()
+    mapM_ (goldenTest protoSpecBody "protoSpecBody") [1..3]
 
 protoSpecTests :: Spec
 protoSpecTests =
   describe "protoSpec" $ do
-    pure ()
+    mapM_ (goldenTest protoSpec "protoSpec") [1..3]
+
+goldenTest :: Show a => Parsec Dec T.Text a -> String -> Int -> Spec
+goldenTest parser dir n =
+  before
+    (liftA2 (,) (TIO.readFile $ "test-data/" <> dir <> "/test"
+                                <> show n <> "-input.txt")
+                (TIO.readFile $ "test-data/" <> dir <> "/test"
+                                <> show n <> "-output.txt"))
+    (it ("Correctly parses the sample input #" <> show n) $ \(t1, t2) ->
+      T.pack (show $ runParser parser "" t1) `shouldBe` t2)
