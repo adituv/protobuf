@@ -1,16 +1,19 @@
-name:                protobuf
+name:                protobuf3
 version:             0.1.0.0
--- synopsis:
--- description:
+synopsis:            Parsing and code generation for protocol buffers v3
+description:         Parsing and automatic generation of datatypes and code for
+                     version 3 of Google's protocol buffers
 homepage:            https://github.com/AdituV/protobuf#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Iris Ward
 maintainer:          aditu.venyhandottir@gmail.com
 copyright:           2017 Iris Ward
-category:            Web
+category:            Data
 build-type:          Simple
 extra-source-files:  README.md
+                   , test-data/protoSpec/*.txt
+                   , test-data/protoSpecBody/*.txt
 cabal-version:       >=1.10
 
 library
@@ -23,21 +26,21 @@ library
                      , text
   default-language:    Haskell2010
 
-executable protobuf-exe
+executable protobuf3-exe
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
-                     , protobuf
+                     , protobuf3
   default-language:    Haskell2010
 
-test-suite protobuf-test
+test-suite protobuf3-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
   other-modules:       Data.Protobuf.Parser.Tests
   build-depends:       base
-                     , protobuf
+                     , protobuf3
                      , checkers
                      , hspec
                      , hspec-megaparsec
@@ -49,4 +52,4 @@ test-suite protobuf-test
 
 source-repository head
   type:     git
-  location: https://github.com/AdituV/protobuf
+  location: https://github.com/AdituV/protobuf3
