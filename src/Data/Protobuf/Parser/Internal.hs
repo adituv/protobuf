@@ -24,7 +24,9 @@ import qualified Text.Megaparsec.Lexer   as L
 
 -- | Parser that skips all whitespace and line comments
 spaceConsumer :: Parsec Dec Text ()
-spaceConsumer = L.space (void spaceChar) (L.skipLineComment "//") mzero
+spaceConsumer = L.space (void spaceChar) -- space between lexemes
+                        (L.skipLineComment "//") -- line comments
+                        (L.skipBlockComment "/*" "*/") -- block comments
 
 -- | Utility to wrap a parser for a lexeme so that it also consumes
 --   following space characters.  Useful when no explicit lexer phase
