@@ -22,6 +22,10 @@ import           Data.Text               (Text)
 import           Text.Megaparsec
 import qualified Text.Megaparsec.Lexer   as L
 
+-- | Variant on $(<?>)$ to make labelling monadic parsers nicer
+labelWith :: String -> Parsec Dec Text a -> Parsec Dec Text a
+labelWith = flip (<?>)
+
 -- | Parser that skips all whitespace and line comments
 spaceConsumer :: Parsec Dec Text ()
 spaceConsumer = L.space (void spaceChar) -- space between lexemes
@@ -51,7 +55,7 @@ decimal = lexeme $ fromInteger <$> L.decimal
 
 -- | Parses a valid protobuf identifier.  **Not a lexeme.**
 ident :: Parsec Dec Text String
-ident = (<?> "identifier") . try $ do
+ident = labelWith "identifier" . try $ do
   h <- alphaChar
   t <- many (alphaChar <|> digitChar <|> char '_')
   let id' = h:t
@@ -66,12 +70,12 @@ identString :: Parsec Dec Text String
 identString = between (char '"') (char '"') ident <?> "identifier string"
 
 protoSpec :: Parsec Dec Text ProtoSpec
-protoSpec = (do
+protoSpec = labelWith "messagespecification" $ do
     void $ symbol "message"
     messageName <- lexeme identifier
     between (symbol "{") (symbol "}") $ do
       (innerSpecs, fields, reserved) <- protoSpecBody
-      pure ProtoSpec{..}) <?> "message specification"
+      pure ProtoSpec{..}
 
 protoSpecBody :: Parsec Dec Text ([ProtoSpec], [FieldSpec], [Reservation])
 protoSpecBody = recombine <$> many specBodyEntry
@@ -96,14 +100,14 @@ specBodyEntry =  MessageEntry <$> protoSpec
              <|> ReservedEntry <$> reservation
 
 fieldSpec :: Parsec Dec Text FieldSpec
-fieldSpec = (do
+fieldSpec = labelWith "field specification" $ do
     fieldMod <- fieldModifier
     fieldType <- protoType
     fieldName <- identifier
     void $ symbol "="
     fieldTag <- decimal
     void $ symbol ";"
-    pure FieldSpec{..}) <?> "field specification"
+    pure FieldSpec{..}
 
 fieldModifier :: Parsec Dec Text FieldModifier
 fieldModifier =  Repeated <$ symbol "repeated"
@@ -128,11 +132,11 @@ protoType =  PDouble <$ symbol "double"
          <?> "protobuf type"
 
 reservation :: Parsec Dec Text [Reservation]
-reservation = (do
+reservation = labelWith "reserved statement" $ do
     void $ symbol "reserved"
     rs <- rtags `sepBy1` symbol "," <|> rnames `sepBy1` symbol ","
     void $ symbol ";"
-    pure rs) <?> "reserved statement"
+    pure rs
   where
     rnames :: Parsec Dec Text Reservation
     rnames =  RName <$> identString
