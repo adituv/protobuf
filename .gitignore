@@ -1,3 +1,5 @@
+# Using hpack so generating cabal files
+*.cabal
 
 # Created by https://www.gitignore.io/api/macos,haskell,sublimetext
 

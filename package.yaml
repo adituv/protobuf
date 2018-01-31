@@ -1,0 +1,45 @@
+name: protobuf3
+version: "0.1.0.0"
+category: Data
+synopsis: Parsing and code generation for protocol buffers v3
+description: Parsing and automatic generation of datatypes and code for version 3 of Google's protocol buffers
+license: BSD3
+author: Iris Ward
+copyright: 2017 Iris Ward
+github: adituv/protobuf3
+
+
+ghc-options: -Wall
+
+extra-source-files:
+- README.md
+
+data-files:
+- test-data/protoSpec/*.txt
+- test-data/protoSpecBody/*.txt
+
+dependencies:
+- base >= 4.7 && < 5
+- megaparsec >= 5 && < 5.4
+- text
+
+library:
+  source-dirs: src
+
+executables:
+  hsprotoc:
+    source-dirs: app
+    main: Main.hs
+    dependencies:
+    - protobuf3
+
+tests:
+  protobuf-tests:
+    source-dirs: test
+    main: Spec.hs
+    dependencies:
+    - protobuf3
+    - checkers
+    - hspec
+    - hspec-megaparsec
+    - QuickCheck
