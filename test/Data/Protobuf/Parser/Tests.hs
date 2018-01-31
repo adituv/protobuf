@@ -290,9 +290,9 @@ fieldSpecTests =
     it "parses the type of a fieldspec correctly" $ property $
       forAll (liftA2 (,) anyFieldSpec anyTypeString) $ \(spec, (pt, tt)) -> do
         spec' <- case (T.words spec) of
-          [type', ident', eq, tag] ->
+          [_type, ident', eq, tag] ->
             pure $ T.unwords [T.pack tt, ident', eq, tag]
-          [res, type', ident', eq, tag] ->
+          [res, _type, ident', eq, tag] ->
             pure $ T.unwords [res, T.pack tt, ident', eq, tag]
           _ -> fail "Unexpected number of words in fieldspec"
 
@@ -303,9 +303,9 @@ fieldSpecTests =
     it "parses the name of a fieldspec correctly" $ property $
       forAll (liftA2 (,) anyFieldSpec anyIdentifier) $ \(spec, name') -> do
         spec' <- case (T.words spec) of
-          [type', ident', eq, tag] ->
+          [type', _ident, eq, tag] ->
             pure $ T.unwords [type', T.pack name', eq, tag]
-          [res, type', ident', eq, tag] ->
+          [res, type', _ident, eq, tag] ->
             pure $ T.unwords [res, type', T.pack name', eq, tag]
           _ -> fail "Unexpected number of words in fieldspec"
 
@@ -317,9 +317,9 @@ fieldSpecTests =
       forAll anyFieldSpec $ \spec (Positive tag) -> do
         let tag' = T.pack $ show (tag :: Int)
         spec' <- case (T.words spec) of
-          [type', ident', eq, tag] ->
+          [type', ident', eq, _tag] ->
             pure $ T.unwords [type', ident', eq, tag' <> ";"]
-          [res, type', ident', eq, tag] ->
+          [res, type', ident', eq, _tag] ->
             pure $ T.unwords [res, type', ident', eq, tag' <> ";"]
           _ -> fail "Unexpected number of words in fieldspec"
 
@@ -359,7 +359,7 @@ specBodyEntryTests =
 
     it "parses a MessageEntry" $ property $
       forAll (liftA3 (,,) anyIdentifier anyTypeString anyIdentifier) $
-        \(mname,(type',typeS),idname) (Positive tag) -> do
+        \(mname,(_type,typeS),idname) (Positive tag) -> do
           let spec' = "message " <> (T.pack mname) <> " {\n\t" <> (T.pack typeS)
                           <> " " <> (T.pack idname) <> " = "
                           <> (T.pack $ show (tag :: Int)) <> ";\n}\n"
