@@ -5,6 +5,7 @@ module Data.Protobuf.CodeGen where
 import           Data.Protobuf.ProtoSpec
 
 import           Data.Char               (toUpper)
+import qualified Data.HashMap.Lazy       as HashMap
 import           Data.Monoid             (mconcat, (<>))
 import           Data.String             (IsString (..))
 import qualified Data.Text.Lazy          as Text.Lazy
@@ -13,8 +14,31 @@ import qualified Data.Text.Lazy.Builder  as Text.Builder
 type LazyText = Text.Lazy.Text
 type TextBuilder = Text.Builder.Builder
 
-genFile :: ProtoSpec -> LazyText
-genFile = Text.Builder.toLazyText . genSpec ""
+genFiles :: LazyText -> ProtoSpec -> [(FilePath, LazyText)]
+genFiles scope spec = HashMap.toList $ genFilesAux scope' spec
+  where
+    scope' = Text.Lazy.intercalate "."
+           . fmap capitalizeT
+           . Text.Lazy.splitOn "."
+           $ scope
+
+    capitalizeT :: LazyText -> LazyText
+    capitalizeT txt = case Text.Lazy.uncons txt of
+      Nothing    -> ""
+      Just (h,t) -> Text.Lazy.cons (toUpper h) t
+
+genFilesAux :: LazyText -> ProtoSpec -> HashMap.HashMap FilePath LazyText
+genFilesAux scope spec@ProtoSpec{..} =
+    HashMap.insert fileName (genFile scope spec)
+  $ HashMap.unions (genFilesAux innerScope <$> innerSpecs)
+  where
+    innerScope = Text.Builder.toLazyText
+               $ addScope scope (fromString $ capitalize messageName)
+    fileName = Text.Lazy.unpack $
+               Text.Lazy.replace "." "/" innerScope <> ".hs"
+
+genFile :: LazyText -> ProtoSpec -> LazyText
+genFile scope = Text.Builder.toLazyText . genSpec scope
 
 endl :: TextBuilder
 endl = "\n"
@@ -30,11 +54,8 @@ genSpec scope ProtoSpec{..} =
     <> genFields fields
     <> endl
   where
-    messageName' = fromString messageName
-    datatypeName = fromString $ case messageName of
-      c:cs -> toUpper c : cs
-      []   -> []
-    scopedName = addScope scope messageName'
+    datatypeName = fromString $ capitalize messageName
+    scopedName = addScope scope datatypeName
 
 addScope :: LazyText -> TextBuilder -> TextBuilder
 addScope scope name
@@ -74,9 +95,13 @@ genType PSFixed64      = "Int64"
 genType PBool          = "Bool"
 genType PString        = "Text"
 genType PBytes         = "ByteString"
-genType (NamedField s) = fromString s
+genType (NamedField s) = fromString $ capitalize s
 
 intercalate :: TextBuilder -> [TextBuilder] -> TextBuilder
 intercalate _   []     = mempty
 intercalate _   [x]    = x
 intercalate mid (x:xs) = x <> mid <> intercalate mid xs
+
+capitalize :: String -> String
+capitalize []     = []
+capitalize (x:xs) = toUpper x : xs

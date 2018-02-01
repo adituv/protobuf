@@ -20,8 +20,10 @@ data-files:
 
 dependencies:
 - base >= 4.7 && < 5
+- bytestring
 - megaparsec >= 5 && < 5.4
 - text
+- unordered-containers
 
 library:
   source-dirs: src
