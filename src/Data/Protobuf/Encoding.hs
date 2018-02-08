@@ -1,3 +1,4 @@
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms   #-}
 {-# LANGUAGE ViewPatterns      #-}
@@ -18,6 +19,9 @@ import Data.ByteString.Builder(Builder)
 import Data.Serialize
 import Data.Word(Word8, Word32)
 
+import GHC.Integer.GMP.Internals
+import GHC.Types
+
 
 maxTag :: Integer
 maxTag = 0x1FFFFFFF -- 2^29 - 1
@@ -25,6 +29,9 @@ maxTag = 0x1FFFFFFF -- 2^29 - 1
 
 -- * Getters
 
+
+-- Will always be parsed as positive - conversion function has to handle
+-- possible negative values
 getVarInt :: Get Integer
 getVarInt = do
   x <- getWord8
@@ -65,7 +72,8 @@ putProtoMeta :: Word32 -> Word8 -> Put
 putProtoMeta tag typ = putVarInt $ fromIntegral (tag `shiftL` 3 .|. fromIntegral typ)
 
 putVarInt :: Putter Integer
-putVarInt = putByteString . toVarIntBytes
+putVarInt (Jn# _) = fail "Negative numbers outside the bounds of Int64 not currently supported"
+putVarInt x       = putByteString . toVarIntBytes $ x 
 
 toVarIntBytes :: Integer -> ByteString
 toVarIntBytes 0 = "\0"
@@ -82,8 +90,14 @@ toVarIntBytes' x = let (next, rest) = splitVarIntByte x
 splitVarIntByte :: Integer -> (Word8, Integer)
 splitVarIntByte x =
   let next = x .&. 0x7F
-      rest = x `div` 128
+      rest = x `lshiftR` 7
   in  (fromIntegral next, rest)
+
+lshiftR :: Integer -> Int -> Integer
+lshiftR x n = case x of
+  S# x' -> fromIntegral $ I# x' `shiftR` n .&. ((1 `shiftL` (finiteBitSize (I# x') - n)) - 1)
+  Jp# _ -> x `shiftR` n
+  Jn# _ -> error "Precondition violated: lshiftR does not take Jn#"
 
 putLengthEncoded :: Putter ByteString
 putLengthEncoded bs = do

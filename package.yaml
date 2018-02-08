@@ -24,7 +24,9 @@ dependencies:
 - cereal
 - containers
 - extra
+- ghc-prim
 - IfElse
+- integer-gmp
 - megaparsec >= 5 && < 5.4
 - mtl
 - text
