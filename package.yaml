@@ -21,7 +21,12 @@ data-files:
 dependencies:
 - base >= 4.7 && < 5
 - bytestring
+- cereal
+- containers
+- extra
+- IfElse
 - megaparsec >= 5 && < 5.4
+- mtl
 - text
 - unordered-containers
 
