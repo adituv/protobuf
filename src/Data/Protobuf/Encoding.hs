@@ -1,6 +1,7 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms   #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns      #-}
 module Data.Protobuf.Encoding where
 
@@ -16,8 +17,9 @@ import Control.Monad.State.Strict
 import Data.Bits
 import Data.ByteString(ByteString)
 import Data.ByteString.Builder(Builder)
-import Data.Serialize
-import Data.Word(Word8, Word32)
+import Data.Int(Int32, Int64)
+import Data.Serialize hiding (Result)
+import Data.Word(Word8, Word32, Word64)
 
 import GHC.Integer.GMP.Internals
 import GHC.Types
@@ -59,10 +61,10 @@ getRawMessageComponent :: Get (Integer, RawValue)
 getRawMessageComponent = do
   (ProtoMeta tag typ) <- getVarInt
   value <- case typ of
-    TVarInt -> VarInt <$> getVarInt
-    TLengthEncoded -> LengthEncoded <$> getLengthEncoded
-    TFixed32 -> Fixed32 <$> getWord32le
-    TFixed64 -> Fixed64 <$> getWord64le
+    TVarInt -> RVarInt <$> getVarInt
+    TLengthEncoded -> RLengthEncoded <$> getLengthEncoded
+    TFixed32 -> RFixed32 <$> getWord32le
+    TFixed64 -> RFixed64 <$> getWord64le
     _      -> fail $ "Unsupported or invalid protobuf type: " ++ show typ
   pure (tag, value)
 
@@ -113,10 +115,10 @@ putRawMessageComponent :: Putter (Word32, [RawValue])
 putRawMessageComponent (t, vs) = mapM_ putSingleValue vs
   where
     putSingleValue v = case v of
-      VarInt x -> putProtoMeta t TVarInt >> putVarInt x
-      LengthEncoded bs -> putProtoMeta t TLengthEncoded >> putLengthEncoded bs
-      Fixed32 x -> putProtoMeta t TFixed32 >> putWord32le x
-      Fixed64 x -> putProtoMeta t TFixed64 >> putWord64le x
+      RVarInt x -> putProtoMeta t TVarInt >> putVarInt x
+      RLengthEncoded bs -> putProtoMeta t TLengthEncoded >> putLengthEncoded bs
+      RFixed32 x -> putProtoMeta t TFixed32 >> putWord32le x
+      RFixed64 x -> putProtoMeta t TFixed64 >> putWord64le x
 
 
 -- * Convenience patterns
@@ -134,3 +136,59 @@ pattern ProtoMeta tag typ <- (splitProtoMeta -> (tag,typ))
 
 splitProtoMeta :: Integer -> (Integer, Word8)
 splitProtoMeta x = (x `div` 8, fromIntegral $ x .&. 7)
+
+-- * Conversion from 'RawValue's
+
+class AsRawValue a where
+    defaultValue :: a
+    toRawValue :: a -> RawValue
+    fromRawValue :: RawValue -> Result a
+
+instance AsRawValue Int32 where
+    defaultValue = 0
+    toRawValue x = RVarInt $ toInteger (fromIntegral x :: Word32)
+    fromRawValue (RVarInt x)
+      | x >= toInteger (minBound @Word32) && x <= toInteger (maxBound @Word32) = Success $ fromInteger x
+      | otherwise = Failure "Value out of range"
+    fromRawValue _ = Failure "Incompatible raw value type"
+
+instance AsRawValue Int64 where
+    defaultValue = 0
+    toRawValue x = RVarInt $ toInteger (fromIntegral x :: Word64)
+    fromRawValue (RVarInt x)
+      | x >= toInteger (minBound @Word64) && x <= toInteger (maxBound @Word64) = Success $ fromInteger x
+      | otherwise = Failure "Value out of range"
+    fromRawValue _ = Failure "Incompatible raw value type"
+
+instance AsRawValue Word32 where
+    defaultValue = 0
+    toRawValue x = RVarInt $ toInteger x
+    fromRawValue (RVarInt x)
+      | x >= toInteger (minBound @Word32) && x <= toInteger (maxBound @Word32) = Success $ fromInteger x
+      | otherwise = Failure "Value out of range"
+    fromRawValue _ = Failure "Incompatible raw value type"
+
+instance AsRawValue Word64 where
+    defaultValue = 0
+    toRawValue x = RVarInt $ toInteger x
+    fromRawValue (RVarInt x)
+      | x >= toInteger (minBound @Word64) && x <= toInteger (maxBound @Word64) = Success $ fromInteger x
+      | otherwise = Failure "Value out of range"
+    fromRawValue _ = Failure "Incompatible raw value type"
+
+instance AsRawValue Fixed32 where
+    defaultValue = Fixed32 0
+    toRawValue (Fixed32 x) = RFixed32 x
+    fromRawValue (RFixed32 x) = Success $ Fixed32 x
+    fromRawValue _ = Failure "Incompatible raw value type"
+
+instance AsRawValue Fixed64 where
+    defaultValue = Fixed64 0
+    toRawValue (Fixed64 x) = RFixed64 x
+    fromRawValue (RFixed64 x) = Success $ Fixed64 x
+    fromRawValue _ = Failure "Incompatible raw value type"
+
+-- TODO Signed integer encodings
+-- TODO Text
+-- TODO Nested messages
+-- TODO Lists

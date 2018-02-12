@@ -20,7 +20,3 @@ import           Data.Word       (Word32, Word64)
 
 class ProtoMessage m where
   parseMessage :: RawMessage -> Result m
-
-class ProtoRawValue a where
-  fromRaw :: RawValue -> Result a
-  defVal :: a

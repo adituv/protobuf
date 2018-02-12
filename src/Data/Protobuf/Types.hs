@@ -1,16 +1,19 @@
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeApplications #-}
 module Data.Protobuf.Types where
 
 import Data.ByteString(ByteString)
+import Data.Int(Int32, Int64)
 import Data.Map.Strict(Map)
 import Data.Word(Word8, Word32, Word64)
 
+
 newtype RawMessage = RawMessage (Map Word32 [RawValue])
 
-data RawValue = VarInt Integer
-              | LengthEncoded ByteString
-              | Fixed32 Word32
-              | Fixed64 Word64
+data RawValue = RVarInt Integer
+              | RLengthEncoded ByteString
+              | RFixed32 Word32
+              | RFixed64 Word64
               deriving Show
 
 pattern TVarInt :: Word8
@@ -24,6 +27,11 @@ pattern TFixed32 = 5
 
 pattern TFixed64 :: Word8
 pattern TFixed64 = 1
+
+newtype Fixed32 = Fixed32 Word32
+newtype Fixed64 = Fixed64 Word64
+newtype SInt32 = SInt32 Int32
+newtype SInt64 = SInt64 Int64
 
 data Result a = Failure String | Success a deriving Show
 
