@@ -1,5 +1,4 @@
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TypeApplications #-}
 module Data.Protobuf.Types where
 
 import Data.ByteString(ByteString)
