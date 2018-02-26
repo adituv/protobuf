@@ -53,7 +53,7 @@ genSpec scope ProtoSpec{..} =
     <> endl
     <> "data " <> datatypeName <> " = " <> datatypeName <> endl
     <> genFields fields
-    <> "deriving (Show, Generic)" <> endl <> endl
+    <> " deriving (Show, Generic)" <> endl <> endl
     <> genInstance scopedName fields
     <> endl
   where
@@ -73,7 +73,8 @@ genInstance :: TextBuilder -> [FieldSpec] -> TextBuilder
 genInstance scopedName fields =
   "instance ProtoMessage where" <> endl <>
   "  parseMessage raw =" <> endl <>
-  "    " <> scopedName <> " <$>" <> endl <> "          " <>
+  "    " <> scopedName <> endl <>
+  "      <$> " <>
   intercalate (endl <> "      <*> ") (genFieldInstance <$> fields) <> endl
 
 genFieldInstance :: FieldSpec -> TextBuilder
@@ -82,7 +83,7 @@ genFieldInstance FieldSpec{..} = "raw .: " <> fromString (show fieldTag)
 genFields :: [FieldSpec] -> TextBuilder
 genFields fields =
   "  { " <> intercalate (endl <> "  , ") (genField <$> fields)
-         <> endl <> "  }" <> endl
+         <> endl <> "  }"
 
 genField :: FieldSpec -> TextBuilder
 genField FieldSpec{..} =
