@@ -17,6 +17,7 @@ import           Test.QuickCheck.Instances
 
 import           Control.Applicative           (liftA2, liftA3)
 import           Control.Monad                 (replicateM)
+import           Data.Bifunctor                (first)
 import           Data.Semigroup                ((<>))
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
@@ -33,6 +34,7 @@ parserTests =
     specBodyEntryTests
     protoSpecBodyTests
     protoSpecTests
+    proto3FileTests
 
 -- * Test utilities
 anyIdentifier :: Gen String
@@ -375,13 +377,18 @@ specBodyEntryTests =
 -- I have to.
 protoSpecBodyTests :: Spec
 protoSpecBodyTests =
-  describe "protoSpecBody" $ do
+  describe "protoSpecBody" $
     mapM_ (goldenTest protoSpecBody "protoSpecBody") [1..3]
 
 protoSpecTests :: Spec
 protoSpecTests =
-  describe "protoSpec" $ do
+  describe "protoSpec" $
     mapM_ (goldenTest protoSpec "protoSpec") [1..3]
+
+proto3FileTests :: Spec
+proto3FileTests =
+  describe "proto3File" $
+    mapM_ (goldenTest proto3File "proto3File") [1..6]
 
 goldenTest :: Show a => Parsec Dec T.Text a -> String -> Int -> Spec
 goldenTest parser dir n =
@@ -391,4 +398,4 @@ goldenTest parser dir n =
                 (TIO.readFile $ "test-data/" <> dir <> "/test"
                                 <> show n <> "-output.txt"))
     (it ("Correctly parses the sample input #" <> show n) $ \(t1, t2) ->
-      T.pack (show $ runParser parser "" t1) `shouldBe` t2)
+        T.pack (show . first parseErrorPretty $ runParser parser "" t1) `shouldBe` t2)

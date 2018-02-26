@@ -1,0 +1,1 @@
+Left "1:1:\nunexpected 'm'\nexpecting Proto3 syntax declaration\n"

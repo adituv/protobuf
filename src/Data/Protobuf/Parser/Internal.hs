@@ -2,6 +2,7 @@
 module Data.Protobuf.Parser.Internal
   ( -- * Public interface
     identifier
+  , proto3File
   , protoSpec
   , protoType
     -- * Implementation details
@@ -15,7 +16,7 @@ module Data.Protobuf.Parser.Internal
 
 import           Data.Protobuf.ProtoSpec
 
-import           Control.Monad           (guard, mzero, void)
+import           Control.Monad           (guard, void)
 import           Data.Char
 import           Data.List               (foldl')
 import           Data.Text               (Text)
@@ -68,6 +69,16 @@ identifier = lexeme ident
 
 identString :: Parsec Dec Text String
 identString = between (char '"') (char '"') ident <?> "identifier string"
+
+proto3File :: Parsec Dec Text ProtoSpec
+proto3File = void <$> syntaxDec *> protoSpec
+  where
+    syntaxDec =  symbol "syntax"
+              *> symbol "="
+              *> symbol "\"proto3\""
+              *> symbol ";"
+             <?> "Proto3 syntax declaration"
+
 
 protoSpec :: Parsec Dec Text ProtoSpec
 protoSpec = labelWith "messagespecification" $ do
