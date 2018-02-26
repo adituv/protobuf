@@ -19,4 +19,5 @@ import           Data.Text       (Text)
 import           Data.Word       (Word32, Word64)
 
 class ProtoMessage m where
-  parseMessage :: RawMessage -> Result m
+  fromProto :: RawMessage -> Result m
+  toProto :: m -> RawMessage

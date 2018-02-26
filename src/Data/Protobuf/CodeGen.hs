@@ -48,13 +48,14 @@ genSpec scope ProtoSpec{..} =
        "module " <> scopedName <> "(module Data.Protobuf, module " <> scopedName <> ") where" <> endl
     <> endl
     <> "import Data.Protobuf" <> endl
+    <> "import Data.Protobuf.Encoding" <> endl
     <> "import GHC.Generics(Generic)" <> endl
     <> mconcat (genImport scopedName <$> innerSpecs)
     <> endl
     <> "data " <> datatypeName <> " = " <> datatypeName <> endl
     <> genFields fields
     <> " deriving (Show, Generic)" <> endl <> endl
-    <> genInstance scopedName fields
+    <> genInstances scopedName fields
     <> endl
   where
     datatypeName = fromString $ capitalize messageName
@@ -69,16 +70,36 @@ genImport :: TextBuilder -> ProtoSpec -> TextBuilder
 genImport scope ProtoSpec{..} =
   "import " <> scope <> "." <> fromString messageName <> endl
 
-genInstance :: TextBuilder -> [FieldSpec] -> TextBuilder
-genInstance scopedName fields =
-  "instance ProtoMessage where" <> endl <>
-  "  parseMessage raw =" <> endl <>
-  "    " <> scopedName <> endl <>
-  "      <$> " <>
-  intercalate (endl <> "      <*> ") (genFieldInstance <$> fields) <> endl
+genInstances :: TextBuilder -> [FieldSpec] -> TextBuilder
+genInstances scopedName fields =
+    protoMessageInstance <> endl <> asRawValueInstance <> endl
+  where
+    protoMessageInstance =
+      "instance ProtoMessage " <> scopedName <> " where" <> endl <>
+      "  fromProto raw =" <> endl <>
+      "    " <> scopedName <> endl <>
+      "      <$> " <>
+      intercalate (endl <> "      <*> ") (genFieldFromProto <$> fields) <> endl <>
+      "  toProto scopedName{..} = RawMessage" <> endl <>
+      "    $ Map.empty" <> endl <>
+      foldMap genFieldToProto fields
 
-genFieldInstance :: FieldSpec -> TextBuilder
-genFieldInstance FieldSpec{..} = "raw .: " <> fromString (show fieldTag)
+    asRawValueInstance =
+      "instance AsRawValue " <> scopedName <> " where" <> endl <>
+      "  defaultValue = " <> endl <>
+      "    " <> scopedName <> endl <>
+      "      <$> " <>
+      intercalate (endl <> "      <*> ") ("defaultValue" <$ fields) <> endl <>
+      "  rawType = RTLengthEncoded" <> endl <>
+      "  toRawValue msg = RLengthEncoded $ runPut putRawMessage (toProto msg)" <> endl <>
+      "  fromRawValue (RLengthEncoded raw) = error \"TODO\""
+
+
+genFieldFromProto :: FieldSpec -> TextBuilder
+genFieldFromProto FieldSpec{..} = "raw .: " <> fromString (show fieldTag)
+
+genFieldToProto :: FieldSpec -> TextBuilder
+genFieldToProto FieldSpec{..} = "      & Map.insert " <> fromString (show fieldTag) <> "(toRaw " <> fromString fieldName <> ")" <> endl
 
 genFields :: [FieldSpec] -> TextBuilder
 genFields fields =
