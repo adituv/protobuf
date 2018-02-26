@@ -45,13 +45,16 @@ endl = "\n"
 
 genSpec :: LazyText -> ProtoSpec -> TextBuilder
 genSpec scope ProtoSpec{..} =
-       "module " <> scopedName <> " where" <> endl
+       "module " <> scopedName <> "(module Data.Protobuf, module " <> scopedName <> ") where" <> endl
     <> endl
     <> "import Data.Protobuf" <> endl
+    <> "import GHC.Generics(Generic)" <> endl
     <> mconcat (genImport scopedName <$> innerSpecs)
     <> endl
     <> "data " <> datatypeName <> " = " <> datatypeName <> endl
     <> genFields fields
+    <> "deriving (Show, Generic)" <> endl <> endl
+    <> genInstance scopedName fields
     <> endl
   where
     datatypeName = fromString $ capitalize messageName
@@ -65,6 +68,16 @@ addScope scope name
 genImport :: TextBuilder -> ProtoSpec -> TextBuilder
 genImport scope ProtoSpec{..} =
   "import " <> scope <> "." <> fromString messageName <> endl
+
+genInstance :: TextBuilder -> [FieldSpec] -> TextBuilder
+genInstance scopedName fields =
+  "instance ProtoMessage where" <> endl <>
+  "  parseMessage raw =" <> endl <>
+  "    " <> scopedName <> " <$>" <> endl <> "          " <>
+  intercalate (endl <> "      <*> ") (genFieldInstance <$> fields) <> endl
+
+genFieldInstance :: FieldSpec -> TextBuilder
+genFieldInstance FieldSpec{..} = "raw .: " <> fromString (show fieldTag)
 
 genFields :: [FieldSpec] -> TextBuilder
 genFields fields =
