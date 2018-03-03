@@ -23,10 +23,9 @@ dependencies:
 - bytestring
 - cereal
 - containers
-- extra
-- ghc-prim
+- directory
+- filepath
 - IfElse
-- integer-gmp
 - megaparsec >= 5 && < 5.4
 - mtl
 - text
@@ -40,6 +39,7 @@ executables:
     source-dirs: app
     main: Main.hs
     dependencies:
+    - optparse-applicative
     - protobuf3
 
 tests:
