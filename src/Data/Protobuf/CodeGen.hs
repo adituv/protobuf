@@ -45,7 +45,8 @@ endl = "\n"
 
 genSpec :: LazyText -> ProtoSpec -> TextBuilder
 genSpec scope ProtoSpec{..} =
-       "module " <> scopedName <> "(module Data.Protobuf, module " <> scopedName <> ") where" <> endl
+       "{-# LANGUAGE RecordWildCards #-}" <> endl
+    <> "module " <> scopedName <> "(module Data.Protobuf, module " <> scopedName <> ") where" <> endl
     <> endl
     <> "import Data.Protobuf" <> endl
     <> "import Data.Protobuf.Encoding" <> endl
@@ -80,7 +81,7 @@ genInstances scopedName fields =
       "    " <> scopedName <> endl <>
       "      <$> " <>
       intercalate (endl <> "      <*> ") (genFieldFromProto <$> fields) <> endl <>
-      "  toProto scopedName{..} = RawMessage" <> endl <>
+          "  toProto " <> scopedName <> "{..} = RawMessage" <> endl <>
       "    $ Map.empty" <> endl <>
       foldMap genFieldToProto fields
 
