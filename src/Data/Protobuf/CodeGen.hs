@@ -4,12 +4,15 @@ module Data.Protobuf.CodeGen where
 
 import           Data.Protobuf.ProtoSpec
 
+import           Control.Arrow           ((&&&))
 import           Data.Char               (toUpper)
 import qualified Data.HashMap.Lazy       as HashMap
 import           Data.Monoid             (mconcat, (<>))
 import           Data.String             (IsString (..))
 import qualified Data.Text.Lazy          as Text.Lazy
 import qualified Data.Text.Lazy.Builder  as Text.Builder
+import           Data.Tree.ScopeTree     (ScopeTree)
+import qualified Data.Tree.ScopeTree     as ScopeTree
 
 type LazyText = Text.Lazy.Text
 type TextBuilder = Text.Builder.Builder
@@ -38,13 +41,19 @@ genFilesAux scope spec@ProtoSpec{..} =
                Text.Lazy.replace "." "/" innerScope <> ".hs"
 
 genFile :: LazyText -> ProtoSpec -> LazyText
-genFile scope = Text.Builder.toLazyText . genSpec scope
+genFile scope spec = Text.Builder.toLazyText . genSpec scope (collectNames spec) $ spec
+
+collectNames :: [LazyText] -> ProtoSpec -> ScopeTree LazyText
+collectNames scope ProtoSpec{..} = ScopeTree.insert messageScoped
+                                 $ mconcat (collectNames messageScoped <$> innerSpecs)
+  where
+    messageScoped = scope ++ [Text.Lazy.pack messageName]
 
 endl :: TextBuilder
 endl = "\n"
 
-genSpec :: LazyText -> ProtoSpec -> TextBuilder
-genSpec scope ProtoSpec{..} =
+genSpec :: LazyText -> ScopeTree LazyText -> ProtoSpec -> TextBuilder
+genSpec scope namesInScope ProtoSpec{..} =
        "{-# LANGUAGE RecordWildCards #-}" <> endl
     <> "module " <> scopedName <> "(module Data.Protobuf, module " <> scopedName <> ") where" <> endl
     <> endl
@@ -54,7 +63,7 @@ genSpec scope ProtoSpec{..} =
     <> mconcat (genImport scopedName <$> innerSpecs)
     <> endl
     <> "data " <> datatypeName <> " = " <> datatypeName <> endl
-    <> genFields fields
+    <> genFields namesInScope fields
     <> " deriving (Show, Generic)" <> endl <> endl
     <> genInstances scopedName fields
     <> endl
@@ -102,36 +111,42 @@ genFieldFromProto FieldSpec{..} = "raw .: " <> fromString (show fieldTag)
 genFieldToProto :: FieldSpec -> TextBuilder
 genFieldToProto FieldSpec{..} = "      & Map.insert " <> fromString (show fieldTag) <> "(toRaw " <> fromString fieldName <> ")" <> endl
 
-genFields :: [FieldSpec] -> TextBuilder
-genFields fields =
-  "  { " <> intercalate (endl <> "  , ") (genField <$> fields)
+genFields :: [FieldSpec] -> ScopeTree LazyText -> TextBuilder
+genFields fields namesInScope =
+  "  { " <> intercalate (endl <> "  , ") (genField namesInScope <$> fields)
          <> endl <> "  }"
 
-genField :: FieldSpec -> TextBuilder
-genField FieldSpec{..} =
+genField :: FieldSpec -> ScopeTree LazyText -> TextBuilder
+genField FieldSpec{..} namesInScope =
     fromString fieldName <> " :: " <> fieldType'
   where
     fieldType' = case fieldMod of
-      Optional -> genType fieldType
-      Repeated -> "[" <> genType fieldType <> "]"
+      Optional -> genType namesInScope fieldType
+      Repeated -> "[" <> genType nameInScope fieldType <> "]"
 
-genType :: ProtoType -> TextBuilder
-genType PDouble        = "Double"
-genType PFloat         = "Float"
-genType PInt32         = "Int32"
-genType PInt64         = "Int64"
-genType PUInt32        = "Word32"
-genType PUInt64        = "Word64"
-genType PSInt32        = "Int32"
-genType PSInt64        = "Int64"
-genType PFixed32       = "Word32"
-genType PFixed64       = "Word64"
-genType PSFixed32      = "Int32"
-genType PSFixed64      = "Int64"
-genType PBool          = "Bool"
-genType PString        = "Text"
-genType PBytes         = "ByteString"
-genType (NamedField s) = fromString $ capitalize s
+genType :: [LazyText] -> ScopeTree LazyText -> ProtoType -> Maybe TextBuilder
+genType _ _ PDouble        = Just "Double"
+genType _ _ PFloat         = Just "Float"
+genType _ _ PInt32         = Just "Int32"
+genType _ _ PInt64         = Just "Int64"
+genType _ _ PUInt32        = Just "Word32"
+genType _ _ PUInt64        = Just "Word64"
+genType _ _ PSInt32        = Just "Int32"
+genType _ _ PSInt64        = Just "Int64"
+genType _ _ PFixed32       = Just "Word32"
+genType _ _ PFixed64       = Just "Word64"
+genType _ _ PSFixed32      = Just "Int32"
+genType _ _ PSFixed64      = Just "Int64"
+genType _ _ PBool          = Just "Bool"
+genType _ _ PString        = Just "Text"
+genType _ _ PBytes         = Just "ByteString"
+genType scope names (NamedField s)
+  | s `startsWith` "."     = Just $ normalizeType (tail s)
+  | otherwise              = resolveName s
+  where
+    possibleScopes = reverse $ inits scope
+    possibleScopedNames = fmap (++ [name]) possibleScopes
+    resolveName name = find (ScopeTree.contains names) possibleScopedNames
 
 intercalate :: TextBuilder -> [TextBuilder] -> TextBuilder
 intercalate _   []     = mempty

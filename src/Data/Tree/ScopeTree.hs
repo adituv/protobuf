@@ -1,4 +1,9 @@
+{-# LANGUAGE CPP #-}
 module Data.Tree.ScopeTree(ScopeTree, nodes, empty, insert, merge, contains) where
+
+#if !MIN_VERSION_base(4,11,0)
+import Data.Semigroup
+#endif
 
 import Data.Tree(Tree(..), Forest)
 import GHC.Exts(groupWith, sortWith)
@@ -62,7 +67,12 @@ merge (ScopeTree n1) (ScopeTree n2) = ScopeTree $ fixup (n1 ++ n2)
     combineDupes [Node x c1, Node _ c2] = Node x $ fixup (c1 ++ c2)
     combineDupes _ = error "Assumption incorrect in combineDupes: list length == 1 or 2"
 
+instance Ord a => Semigroup (ScopeTree a) where
+  (<>) = merge
+
+instance Ord a => Monoid (ScopeTree a) where
+  mappend = (<>)
+  mempty = empty
+
 -- As for our purposes we do not currently need to remove names from the tree,
--- deletion methods are omitted.  I am pretty sure 'merge' and 'empty' form a
--- monoid over 'ScopeTree' but want to look into the monoid laws further before
--- adding that.
+-- deletion methods are omitted.
