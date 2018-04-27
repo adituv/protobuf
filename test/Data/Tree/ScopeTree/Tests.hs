@@ -21,8 +21,9 @@ isValidTree = (&&) <$> isSorted . nodes <*> getAll . foldMap (All . isSorted . s
 scopeTreeTests :: Spec
 scopeTreeTests =
   describe "ScopeTree" $ do
-    constructionTests
+    insertTests
     lookupTests
+    mergeTests
 
 sampleTree :: ScopeTree Int
 sampleTree = insert [4,2]
@@ -30,11 +31,23 @@ sampleTree = insert [4,2]
            . insert [2]
            $ empty
 
+sampleTree2 :: ScopeTree Int
+sampleTree2 = insert [5]
+            . insert [3]
+            . insert [1]
+            $ empty
+
+sampleTree3 :: ScopeTree Int
+sampleTree3 = insert [4,1]
+            . insert [3]
+            . insert [1]
+            $ empty
+
 sampleNodes :: Forest Int
 sampleNodes = [Node 2 [], Node 4 [Node 1 [], Node 2 []]]
 
-constructionTests :: Spec
-constructionTests =
+insertTests :: Spec
+insertTests =
   describe "insert" $ do
     it "inserts a top-level name into an empty tree" $
       nodes (insert [1] empty) ==
@@ -69,3 +82,20 @@ lookupTests =
       not (sampleTree `contains` [4,3])
     it "returns true for a present inner-scope name" $
       sampleTree `contains` [4,2]
+
+mergeTests :: Spec
+mergeTests =
+  describe "merge" $ do
+    it "has left identity 'empty'" $
+      nodes (merge empty sampleTree) == sampleNodes
+    it "has right identity 'empty'" $
+      nodes (merge sampleTree empty) == sampleNodes
+    it "is idempotent" $
+      nodes (merge sampleTree sampleTree) == sampleNodes
+    it "keeps all nodes of disjoint trees" $
+      nodes (merge sampleTree sampleTree2) ==
+        [Node 1 [], Node 2 [], Node 3 [], Node 4 [Node 1 [], Node 2 []], Node 5 []]
+    it "correctly merges two overlapping trees" $
+      nodes (merge sampleTree sampleTree3) ==
+        [Node 1 [], Node 2 [], Node 3 [], Node 4 [Node 1 [], Node 2 []]]
+

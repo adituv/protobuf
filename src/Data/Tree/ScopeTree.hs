@@ -1,6 +1,7 @@
-module Data.Tree.ScopeTree(ScopeTree, nodes, empty, insert, contains) where
+module Data.Tree.ScopeTree(ScopeTree, nodes, empty, insert, merge, contains) where
 
 import Data.Tree(Tree(..), Forest)
+import GHC.Exts(groupWith, sortWith)
 
 -- | Represents a tree of names in nested scopes.  Each scope itself is
 --   assumed to be a name for the purposes of this, as other than the outer
@@ -52,6 +53,16 @@ contains' (Node y children:ys) (x:xs)
   | x > y  = contains' ys (x:xs)
   | otherwise = False
 
+-- | Combine two trees of scoped names into a single 'ScopeTree'
+merge :: Ord a => ScopeTree a -> ScopeTree a -> ScopeTree a
+merge (ScopeTree n1) (ScopeTree n2) = ScopeTree $ fixup (n1 ++ n2)
+  where
+    fixup = fmap combineDupes . groupWith rootLabel . sortWith rootLabel
+    combineDupes [n] = n
+    combineDupes [Node x c1, Node _ c2] = Node x $ fixup (c1 ++ c2)
+    combineDupes _ = error "Assumption incorrect in combineDupes: list length == 1 or 2"
+
 -- As for our purposes we do not currently need to remove names from the tree,
--- deletion methods are omitted.  A union over ScopeTrees would be useful for
--- when multiple files and imports are supported.
+-- deletion methods are omitted.  I am pretty sure 'merge' and 'empty' form a
+-- monoid over 'ScopeTree' but want to look into the monoid laws further before
+-- adding that.
