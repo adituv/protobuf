@@ -112,7 +112,8 @@ genInstances scopedName fields =
       "  toRawValue msg = RLengthEncoded . runPut $ putRawMessage (toProto msg)" <> endl <>
       "  fromRawValue (RLengthEncoded raw) = case runGet getRawMessage raw of" <> endl <>
       "    Right rawMessage -> fromProto rawMessage" <> endl <>
-      "    Left err         -> Failure err"
+      "    Left err         -> Failure err" <> endl <>
+      "  fromRawValue _ = rawTypeFailure"
 
 genFieldFromProto :: FieldSpec -> TextBuilder
 genFieldFromProto FieldSpec{..} = "raw .: " <> fromString (show fieldTag)
@@ -151,31 +152,30 @@ genType _ _ PBool           = Right "Bool"
 genType _ _ PString         = Right "Text"
 genType _ _ PBytes          = Right "ByteString"
 genType scope names (NamedField s)
-  | "." `List.isPrefixOf` s = resolveNameAbsolute (tail s)
-  | otherwise               = resolveName s
+  | "." `List.isPrefixOf` s = resolveNameAbsolute names (tail s)
+  | otherwise               = resolveName scope names s
+
+resolveName :: [LazyText] -> ScopeTree LazyText -> String -> Either String TextBuilder
+resolveName curScope namesInScope name = maybe (Left $ "Could not resolve name " <> name)
+                                               (Right . normalizeType)
+                                      . List.find (ScopeTree.contains namesInScope)
+                                      . fmap ( flip (++)
+                                             . Text.Lazy.splitOn "."
+                                             . fromString
+                                             $ name
+                                             )
+                                      $ possibleScopes
   where
-    possibleScopes :: [[LazyText]]
-    possibleScopes = reverse $ List.inits scope
+    possibleScopes = reverse $ List.inits curScope
 
-    resolveName :: String -> Either String TextBuilder
-    resolveName name = maybe (Left $ "Could not resolve name " <> name)
-                             (Right . normalizeType)
-                     . List.find (ScopeTree.contains names)
-                     . fmap ( flip (++)
-                            . Text.Lazy.splitOn "."
-                            . fromString
-                            $ name
-                            )
-                     $ possibleScopes
+resolveNameAbsolute :: ScopeTree LazyText -> String -> Either String TextBuilder
+resolveNameAbsolute namesInScope name
+  | ScopeTree.contains namesInScope (Text.Lazy.splitOn "." $ fromString name)
+      = Right $ normalizeType (Text.Lazy.splitOn "." $ fromString name)
+  | otherwise = Left $ "Could not resolve name " <> name
 
-    resolveNameAbsolute :: String -> Either String TextBuilder
-    resolveNameAbsolute name
-      | ScopeTree.contains names (Text.Lazy.splitOn "." $ fromString name)
-          = Right $ normalizeType (Text.Lazy.splitOn "." $ fromString name)
-      | otherwise = Left $ "Could not resolve name " <> name
-
-    normalizeType :: [LazyText] -> TextBuilder
-    normalizeType = intercalate "." . (\xs -> xs <> [last xs]) . fmap (Text.Builder.fromLazyText . capitalizeText)
+normalizeType :: [LazyText] -> TextBuilder
+normalizeType = intercalate "." . (\xs -> xs <> [last xs]) . fmap (Text.Builder.fromLazyText . capitalizeText)
 
 intercalate :: TextBuilder -> [TextBuilder] -> TextBuilder
 intercalate _   []     = mempty
