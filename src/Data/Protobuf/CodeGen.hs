@@ -110,7 +110,9 @@ genInstances scopedName fields =
       intercalate (endl <> "      ") ("defaultValue" <$ fields) <> endl <>
       "  rawType = RTLengthEncoded" <> endl <>
       "  toRawValue msg = RLengthEncoded . runPut $ putRawMessage (toProto msg)" <> endl <>
-      "  fromRawValue (RLengthEncoded raw) = error \"TODO\""
+      "  fromRawValue (RLengthEncoded raw) = case runGet getRawMessage raw of" <> endl <>
+      "    Right rawMessage -> fromProto rawMessage" <> endl <>
+      "    Left err         -> Failure err"
 
 genFieldFromProto :: FieldSpec -> TextBuilder
 genFieldFromProto FieldSpec{..} = "raw .: " <> fromString (show fieldTag)
