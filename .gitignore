@@ -1,6 +1,9 @@
 # Using hpack so generating cabal files
 *.cabal
 
+# Directory I'm using for manual testing of my tool
+src/Autogen/*
+
 # Created by https://www.gitignore.io/api/macos,haskell,sublimetext
 
 ### Haskell ###
