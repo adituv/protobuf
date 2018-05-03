@@ -7,13 +7,14 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns      #-}
-module Data.Protobuf.Encoding where
+module Data.Protobuf.Encoding(module Data.Protobuf.Types, module Data.Protobuf.Encoding, module Data.Serialize) where
 
 import Data.Protobuf.Types
 
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Lazy as Lazy
+import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 
 import Control.Applicative(many)
@@ -60,11 +61,11 @@ getLengthEncoded = do
 
 getRawMessage :: Get RawMessage
 getRawMessage = fmap RawMessage
-             <$> flip execStateT Map.empty
+             <$> flip execStateT IntMap.empty
               $  untilM (lift isEmpty) $ do
                    (t,v) <- lift getRawMessageComponent
                    when (t > maxTag) $ fail ("Tag value out of range: " ++ show t)
-                   modify' $ Map.insertWith (++) (fromIntegral t) [v]
+                   modify' $ IntMap.insertWith (++) (fromIntegral t) [v]
 
 
 getRawMessageComponent :: Get (Integer, RawValue)
@@ -80,7 +81,7 @@ getRawMessageComponent = do
 
 -- * Putters
 
-putProtoMeta :: Word32 -> Word8 -> Put
+putProtoMeta :: Int -> Word8 -> Put
 putProtoMeta tag typ = putVarInt $ fromIntegral (tag `shiftL` 3 .|. fromIntegral typ)
 
 putVarInt :: Putter Integer
@@ -111,9 +112,9 @@ putLengthEncoded bs = do
   putByteString bs
 
 putRawMessage :: Putter RawMessage
-putRawMessage (RawMessage msg) = mapM_ putRawMessageComponent $ Map.toAscList msg
+putRawMessage (RawMessage msg) = mapM_ putRawMessageComponent $ IntMap.toAscList msg
 
-putRawMessageComponent :: Putter (Word32, [RawValue])
+putRawMessageComponent :: Putter (Int, [RawValue])
 putRawMessageComponent (t, vs) = mapM_ putSingleValue vs
   where
     putSingleValue v = case v of
@@ -268,3 +269,8 @@ listGetterFor RTVarInt = many (RVarInt <$> getVarInt)
 listGetterFor RTLengthEncoded = many (RLengthEncoded <$> getLengthEncoded)
 listGetterFor RTFixed32 = many (RFixed32 <$> getWord32le)
 listGetterFor RTFixed64 = many (RFixed64 <$> getWord64le)
+
+(.:) :: AsRawValue a => RawMessage -> Int -> Result a
+(RawMessage msg) .: tag = case IntMap.lookup tag msg of
+    Just (x:_) -> fromRawValue x
+    _          -> pure defaultValue

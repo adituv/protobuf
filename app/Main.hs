@@ -38,8 +38,8 @@ compileProto Options{..} srcPath = do
             exitFailure
         Right s -> pure s
     dstFiles <- case genFiles namespace spec of
-        Just files -> pure files
-        Nothing    -> putStrLn "Codegen error!!!" >> exitFailure
+        Right files -> pure files
+        Left err    -> putStrLn ("Codegen error: " <> err) >> exitFailure
     forM_ dstFiles $ \(path, contents) -> do
         let dir = outdir </> takeDirectory path
         createDirectoryIfMissing True dir   -- True = create parents

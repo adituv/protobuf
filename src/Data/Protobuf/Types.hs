@@ -3,17 +3,19 @@ module Data.Protobuf.Types where
 
 import Data.ByteString(ByteString)
 import Data.Int(Int32, Int64)
-import Data.Map.Strict(Map)
+import Data.IntMap.Strict(IntMap)
+import qualified Data.IntMap.Strict as IntMap
 import Data.Word(Word8, Word32, Word64)
 
 
-newtype RawMessage = RawMessage (Map Word32 [RawValue])
+newtype RawMessage = RawMessage (IntMap [RawValue])
 
 data RawValue = RVarInt Integer
               | RLengthEncoded ByteString
               | RFixed32 Word32
               | RFixed64 Word64
               deriving Show
+
 
 pattern TVarInt :: Word8
 pattern TVarInt = 0
