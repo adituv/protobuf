@@ -3,8 +3,8 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Data.Protobuf.Parser.Tests
-  ( parserTests
+module Data.Protobuf.ParserSpec
+  ( spec
   ) where
 
 import           Data.Protobuf.Parser.Internal
@@ -23,8 +23,8 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Text.Megaparsec
 
-parserTests :: Spec
-parserTests =
+spec :: Spec
+spec =
   describe "Protobuf parser" $ do
     identifierTests
     protoTypeTests

@@ -1,4 +1,4 @@
-module Data.Tree.ScopeTree.Tests where
+module Data.Tree.ScopeTreeSpec where
 
 import Data.Tree.ScopeTree
 
@@ -14,12 +14,12 @@ isValidTree :: Ord a => ScopeTree a -> Bool
 isValidTree = (&&) <$> isSorted . nodes <*> getAll . foldMap (All . isSorted . subForest) . nodes
   where
     isSorted :: Ord a => Forest a -> Bool
-    isSorted nodes = nodes == sortWith rootLabel nodes
+    isSorted ns = ns == sortWith rootLabel ns
 
 -- * Tests
 
-scopeTreeTests :: Spec
-scopeTreeTests =
+spec :: Spec
+spec =
   describe "ScopeTree" $ do
     insertTests
     lookupTests
