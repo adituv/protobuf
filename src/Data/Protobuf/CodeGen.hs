@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
-module Data.Protobuf.CodeGen where
+module Data.Protobuf.CodeGen(genFiles, resolveName) where
 
 import           Data.Protobuf.ProtoSpec
 
@@ -151,31 +151,33 @@ genType _ _ PSFixed64       = Right "Int64"
 genType _ _ PBool           = Right "Bool"
 genType _ _ PString         = Right "Text"
 genType _ _ PBytes          = Right "ByteString"
-genType scope names (NamedField s)
-  | "." `List.isPrefixOf` s = resolveNameAbsolute names (tail s)
-  | otherwise               = resolveName scope names s
+genType scope names (NamedField n) = fmap normalizeType
+                                   . resolveName scope names
+                                   $ n
 
-resolveName :: [LazyText] -> ScopeTree LazyText -> String -> Either String TextBuilder
-resolveName curScope namesInScope name = maybe (Left $ "Could not resolve name " <> name)
-                                               (Right . normalizeType)
-                                      . List.find (ScopeTree.contains namesInScope)
-                                      . fmap ( flip (++)
-                                             . Text.Lazy.splitOn "."
-                                             . fromString
-                                             $ name
-                                             )
-                                      $ possibleScopes
+resolveName :: [LazyText] -> ScopeTree LazyText -> String -> Either String [LazyText]
+resolveName curScope namesInScope name =
+      maybe (Left $ "Could not resolve name " <> name)
+            Right
+    . List.find (ScopeTree.contains namesInScope)
+    . fmap (++ deconstructName name)
+    $ possibleScopes
   where
-    possibleScopes = reverse $ List.inits curScope
-
-resolveNameAbsolute :: ScopeTree LazyText -> String -> Either String TextBuilder
-resolveNameAbsolute namesInScope name
-  | ScopeTree.contains namesInScope (Text.Lazy.splitOn "." $ fromString name)
-      = Right $ normalizeType (Text.Lazy.splitOn "." $ fromString name)
-  | otherwise = Left $ "Could not resolve name " <> name
+    possibleScopes =
+      if "." `List.isPrefixOf` name
+        then List.inits curScope
+        else reverse $ List.inits curScope
+    deconstructName = dropEmpty
+                    . Text.Lazy.splitOn "."
+                    . fromString
+    dropEmpty (x:xs)
+      | Text.Lazy.null x = xs
+    dropEmpty xs = xs
 
 normalizeType :: [LazyText] -> TextBuilder
-normalizeType = intercalate "." . (\xs -> xs <> [last xs]) . fmap (Text.Builder.fromLazyText . capitalizeText)
+normalizeType = intercalate "."
+              . (\xs -> xs ++ [last xs])
+              . fmap (Text.Builder.fromLazyText . capitalizeText)
 
 intercalate :: TextBuilder -> [TextBuilder] -> TextBuilder
 intercalate _   []     = mempty
