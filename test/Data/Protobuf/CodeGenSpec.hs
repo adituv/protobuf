@@ -5,9 +5,12 @@ import Test.Hspec
 
 import Data.Protobuf.CodeGen
 
-
+import Control.Applicative(liftA2)
 import Data.Either(isLeft)
 import Data.Function((&))
+import Data.Monoid((<>))
+import qualified Data.Text as Text
+import qualified Data.Text.IO as TIO
 import qualified Data.Text.Lazy as Text.Lazy
 import Data.Tree.ScopeTree(ScopeTree)
 import qualified Data.Tree.ScopeTree as ScopeTree
@@ -18,8 +21,7 @@ spec :: Spec
 spec =
   describe "Code generation" $ do
     nameResolveTests
-    shouldPassTests
-    shouldFailTests
+    goldenTests
 
 sampleScopeTree :: ScopeTree LazyText
 sampleScopeTree =
@@ -44,7 +46,7 @@ nameResolveTests =
           ScopeTree.empty
           "Inner"
     it "correctly resolves an unqualified name defined in the same scope" $
-      Right ["Some", "Scope", "Message", "Inner"] ==
+      Right ["Some", "Scope", "Message", "Inner"] `shouldBe`
         resolveName
           sampleCurrentScope
           sampleScopeTree
@@ -56,7 +58,7 @@ nameResolveTests =
           sampleScopeTree
           "Missing"
     it "correctly resolves an unqualified name defined in an outer scope" $
-      Right ["Some","Scope","Sibling"] ==
+      Right ["Some","Scope","Sibling"] `shouldBe`
         resolveName
           sampleCurrentScope
           sampleScopeTree
@@ -68,56 +70,65 @@ nameResolveTests =
           sampleScopeTree
           "Cousin"
     it "correct resolves a qualified name defined in the same scope" $
-      Right ["Some","Scope","Message", "Inner"] ==
+      Right ["Some","Scope","Message", "Inner"] `shouldBe`
         resolveName
           sampleCurrentScope
           sampleScopeTree
           "Message.Inner"
     it "correctly resolves a qualified name defined in an outer scope" $
-      Right ["Some", "Scope", "Sibling"] ==
+      Right ["Some", "Scope", "Sibling"] `shouldBe`
         resolveName
           sampleCurrentScope
           sampleScopeTree
           "Some.Scope.Sibling"
     it "correctly resolves a qualified name defined in a sibling scope" $
-      Right ["Some","Scope","Sibling","Cousin"] ==
+      Right ["Some","Scope","Sibling","Cousin"] `shouldBe`
         resolveName
           sampleCurrentScope
           sampleScopeTree
           "Sibling.Cousin"
     it "correctly resolves an unqualified duplicate name" $
-      Right ["Some", "Scope", "Message", "Duplicate"] ==
+      Right ["Some", "Scope", "Message", "Duplicate"] `shouldBe`
         resolveName
           sampleCurrentScope
           sampleScopeTree
           "Duplicate"
     it "correctly resolves an unqualified name from outer scope" $
-      Right ["Some", "Scope", "Message", "Inner"] ==
+      Right ["Some", "Scope", "Message", "Inner"] `shouldBe`
         resolveName
           sampleCurrentScope
           sampleScopeTree
           ".Inner"
     it "correctly resolves an unqualified duplicate name from outer scope" $
-      Right ["Some", "Scope", "Duplicate"] ==
+      Right ["Some", "Scope", "Duplicate"] `shouldBe`
         resolveName
           sampleCurrentScope
           sampleScopeTree
           ".Duplicate"
     it "correctly resolves a qualified name from outer scope" $
-      Right ["Some", "Scope", "Message"] ==
+      Right ["Some", "Scope", "Message"] `shouldBe`
         resolveName
           ["Some", "Scope", "Message", "Scope"]
           sampleScopeTree
           ".Scope.Message"
     it "correctly resolves a qualified duplicate name from outer scope" $
-      Right ["Some", "Scope", "Duplicate"] ==
+      Right ["Some", "Scope", "Duplicate"] `shouldBe`
         resolveName
           ["Some", "Scope", "Message", "Scope"]
           sampleScopeTree
           ".Scope.Duplicate"
 
-shouldPassTests :: Spec
-shouldPassTests = pure ()
+goldenTest :: FilePath -> Int -> Spec
+goldenTest dir n =
+  before
+    (liftA2 (,) (TIO.readFile $ "test-data/" <> dir <> "/test"
+                   <> show n <> "-input.txt")
+                (TIO.readFile $ "test-data/" <> dir <> "/test"
+                   <> show n <> "-output.txt"))
+    (it ("Correctly generates files from input #" <> show n) $ \(t1,t2) ->
+        Text.pack (show $ genFiles "" (read $ Text.unpack t1)) `shouldBe` t2)
 
-shouldFailTests :: Spec
-shouldFailTests = pure ()
+goldenTests :: Spec
+goldenTests =
+  describe "genFiles - Successes" $
+      mapM_ (goldenTest "genFiles") [1..3]

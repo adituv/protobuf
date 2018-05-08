@@ -12,7 +12,7 @@ data ProtoSpec = ProtoSpec
   , innerSpecs  :: [ProtoSpec]   -- ^ Specifications for nested message types.
   , fields      :: [FieldSpec]   -- ^ The fields specified by the specification.
   , reserved    :: [Reservation] -- ^ Reserved tags that must not be used.
-  } deriving (Show, Eq)
+  } deriving (Read, Show, Eq)
 
 -- | A value field in the specification of a protobuf message.
 data FieldSpec = FieldSpec
@@ -23,13 +23,13 @@ data FieldSpec = FieldSpec
   , fieldName :: String         -- ^ The name of the field.
   , fieldTag  :: !Int           -- ^ The relative position of the field within
                                 --   the message.
-  } deriving (Show, Eq)
+  } deriving (Read, Show, Eq)
 
 -- | The field's modifier.  In proto2, there was also a "required" modifier,
 --   meaning the field must be present, and also an "optional" modifier.  In
 --   proto3, there is no longer a "required" modifier, and "optional" is
 --   represented by a lack of a modifier.
-data FieldModifier = Optional | Repeated deriving (Show, Eq)
+data FieldModifier = Optional | Repeated deriving (Read, Show, Eq)
 
 -- | The possible types of fields in a protobuf message.
 data ProtoType = PDouble -- ^ 64-bit IEEE754 floating point.
@@ -55,7 +55,7 @@ data ProtoType = PDouble -- ^ 64-bit IEEE754 floating point.
                          --   or 7-bit ASCII-encoded text.
                | PBytes -- ^ An arbitrary sequence of bytes.
                | NamedField String -- ^ A message or enum type.
-               deriving (Show, Eq)
+               deriving (Read, Show, Eq)
 
 -- | The specification of a tag or name that may not be used in a protobuf
 --   message.
@@ -64,4 +64,4 @@ data Reservation = RTag !Int -- ^ A single tag.
                                   --   given int.
                  | RTagRange !Int !Int -- ^ All tags in a range, inclusive.
                  | RName String -- ^ A single reserved name.
-                 deriving (Show, Eq)
+                 deriving (Read, Show, Eq)
