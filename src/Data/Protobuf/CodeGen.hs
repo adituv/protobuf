@@ -133,7 +133,7 @@ genField currentScope namesInScope FieldSpec{..} = do
   fieldType' <- case fieldMod of
     Optional -> genType currentScope namesInScope fieldType
     Repeated -> genType currentScope namesInScope fieldType >>= \x -> pure ("[" <> x <> "]")
-  pure $ fromString fieldName <> " :: " <> fieldType'
+  pure $ fromString fieldName <> " :: !" <> fieldType'
 
 genType :: [LazyText] -> ScopeTree LazyText -> ProtoType -> Either String TextBuilder
 genType _ _ PDouble         = Right "Double"
