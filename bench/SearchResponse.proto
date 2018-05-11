@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message SearchResponse {
+  string query = 1;
+  int32 page_number = 2;
+  int32 result_per_page = 3;
+  repeated string results = 5;
+
+  reserved 4, 6 to 10;
+}

@@ -15,6 +15,7 @@ extra-source-files:
 - README.md
 
 data-files:
+- test-data/genFiles/*.txt
 - test-data/protoSpec/*.txt
 - test-data/protoSpecBody/*.txt
 
@@ -52,3 +53,20 @@ tests:
     - hspec
     - hspec-megaparsec
     - QuickCheck
+
+benchmarks:
+  protobuf3-bench:
+    source-dirs: bench/protobuf3
+    main: Main.hs
+    dependencies:
+      - criterion
+      - process
+      - protobuf3
+  proto-lens-bench:
+    source-dirs: bench/proto-lens
+    main: Main.hs
+    dependencies:
+    - criterion
+    - process
+    - proto-lens
+    - proto-lens-protoc
