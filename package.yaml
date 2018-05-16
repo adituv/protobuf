@@ -68,6 +68,6 @@ benchmarks:
     source-dirs: bench/protoc
     main: Main.hs
     dependencies:
-    - criterion
+    - criterion >= 1.2.0.0
     - process
     - proto-lens-protoc
