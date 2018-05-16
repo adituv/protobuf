@@ -55,18 +55,19 @@ tests:
     - QuickCheck
 
 benchmarks:
-  protobuf3-bench:
-    source-dirs: bench/protobuf3
+  encode-decode-bench:
+    source-dirs: bench/encode-decode
     main: Main.hs
     dependencies:
       - criterion
       - process
       - protobuf3
-  proto-lens-bench:
-    source-dirs: bench/proto-lens
+      - proto-lens
+      - proto-lens-protoc
+  protoc-bench:
+    source-dirs: bench/protoc
     main: Main.hs
     dependencies:
     - criterion
     - process
-    - proto-lens
     - proto-lens-protoc

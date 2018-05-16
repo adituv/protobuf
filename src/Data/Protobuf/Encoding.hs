@@ -25,7 +25,7 @@ import Data.Bits
 import Data.ByteString(ByteString)
 import Data.ByteString.Builder(Builder)
 import Data.Int(Int32, Int64)
-import Data.Serialize hiding (Result)
+import Data.Serialize(Get, Put, Putter, getWord8, getWord32le, getWord64le, getByteString, isolate, putWord32le, putWord64le, runPut, runGet, isEmpty, putByteString)
 import Data.Text(Text)
 import Data.Text.Encoding(decodeUtf8', encodeUtf8)
 import Data.Word(Word8, Word32, Word64)

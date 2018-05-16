@@ -1,19 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 module Main(main) where
 
-import Criterion.Main
-import Proto.Bench.SearchResponse
-
-import Data.ProtoLens
-
-import Data.ByteString(ByteString)
-import Data.List(dropWhileEnd)
-import Data.Monoid((<>))
-import System.Exit(ExitCode(..))
-import System.Info(os,arch)
-import System.Process
-
+{-
 protocZipInfo :: (String, String)
 protocZipInfo =
   let
@@ -55,27 +42,12 @@ installProtoc = do
       callProcess "unzip" ["-o", protocZipFilePath, "-d", "/tmp", "bin/protoc"]
 
 main :: IO ()
-main = do
-    protocPath <- installProtoc
-    pluginPath <- trimEnd <$> readProcess "stack" [ "exec", "which", "--", "proto-lens-protoc"] ""
-    callProcess "stack" [ "exec", protocPath, "--"
-                        , "--plugin=protoc-gen-haskell=" <> pluginPath
-                        , "--haskell_out=bench/proto-lens"
-                        , "bench/SearchResponse.proto" ]
-    runBenchmarks
-  where
-    trimEnd = dropWhileEnd (== '\n')
-
-sampleMessage :: SearchResponse
-sampleMessage = SearchResponse "some query" 1 2 ["result 1", "result 2", "result 3"]
-
-sampleMessageBytes :: ByteString
-sampleMessageBytes = encodeMessage sampleMessage
-
-runBenchmarks :: IO ()
-runBenchmarks = defaultMain
-  [ bgroup "Round trip"
-     [ bench "Encode-Decode" $ whnf (decodeMessage @SearchResponse . encodeMessage) sampleMessage
-     , bench "Decode-Encode" $ nf (encodeMessage . decodeMessageOrDie @SearchResponse) sampleMessageBytes
-     ]
+main = defaultMain
+  [ bgroup "Round trip encoding+decoding"
+      bgroup "SearchResponse"
+        [ roundTrip sampleMessage sampleMessageBytes ]
   ]
+-}
+
+main :: IO ()
+main = pure ()
