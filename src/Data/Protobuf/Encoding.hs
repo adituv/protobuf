@@ -246,6 +246,15 @@ instance AsRawValue Text where
             Left err -> Failure $ displayException err
     fromRawValue _ = rawTypeFailure
 
+instance AsRawValue Bool where
+    defaultValue = False
+    rawType = RTVarInt
+    toRawValue True = RVarInt 1
+    toRawValue False = RVarInt 0
+    fromRawValue (RVarInt 0) = Success False
+    fromRawValue (RVarInt _) = Success True
+    fromRawValue _ = rawTypeFailure
+
 -- Nested messages will be handled in their generated source files
 
 instance AsRawValue a => AsRawValue [a] where
