@@ -100,7 +100,13 @@ main = do
   hsProtocPath <- getHsProtocPath
   defaultMain
     [ bgroup "protoc"
-       [ benchProtoc protocPath protoPluginPath "SearchResponse" ]
+       [ benchProtoc protocPath protoPluginPath "SearchResponse"
+       , benchProtoc protocPath protoPluginPath "SearchResponse2"
+       , benchProtoc protocPath protoPluginPath "Test3"
+       ]
     , bgroup "hsprotoc"
-       [ benchHsProtoc hsProtocPath "SearchResponse" ]
+       [ benchHsProtoc hsProtocPath "SearchResponse"
+       , benchHsProtoc hsProtocPath "SearchResponse2"
+       , benchHsProtoc hsProtocPath "Test3"
+       ]
     ]
