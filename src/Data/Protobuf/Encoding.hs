@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -15,7 +14,6 @@ import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Lazy as Lazy
 import qualified Data.IntMap.Strict as IntMap
-import qualified Data.Map.Strict as Map
 
 import Control.Applicative(many)
 import Control.Exception(displayException)
